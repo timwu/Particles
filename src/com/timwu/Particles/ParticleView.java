@@ -45,7 +45,7 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 			
 			prevTick = System.nanoTime();
 			Log.i(TAG, "Starting with tick " + prevTick);
-			//setGravity(0.0f, 9.8f);
+			setGravity(0.0f, 9.8f);
 			while(!isInterrupted()) {
 				synchronized (this) {
 					tick(); // Update the clocking info
