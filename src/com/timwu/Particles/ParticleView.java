@@ -19,6 +19,7 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 	private static final String TAG = "ParticleView";
 	private static final float NANO_SECONDS_PER_SECOND = 1000000000.0f;
 	private static final float GRAVITY_IN_INCHES = 32.2f * 12.0f;
+	private static final float GRAVITY_IN_METERS = 9.8f;
 	
 	private ParticleViewLoop loop;
 	private float xdpi;
@@ -44,7 +45,7 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 			
 			prevTick = System.nanoTime();
 			Log.i(TAG, "Starting with tick " + prevTick);
-			setGravityAngle((float) (Math.PI / 2));
+			//setGravity(0.0f, 9.8f);
 			while(!isInterrupted()) {
 				synchronized (this) {
 					tick(); // Update the clocking info
@@ -53,11 +54,12 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 					doDraw();
 				}
 			}
+			particles.clear();
 		}
 		
 		private void doPhysics() {
 			// Add a particle each time around
-			sprayParticles(1, getWidth() / 2.0f, getHeight() * 0.1f, 300.0f, 
+			sprayParticles(1, getWidth() / 2.0f, getHeight() * 0.15f, 300.0f, 
 					(float) (3 * Math.PI / 2), (float) Math.PI / 4);
 			
 			// Physics states that any particle outside of the view, should be annihilated. I think.
@@ -114,14 +116,13 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 				p.vy = (float) (Math.sin(a) * v);
 				p.color = Color.CYAN;
 				p.r = 2.0f;
-				Log.i(TAG, "p " + p);
 				particles.add(p);
 			}
 		}
 		
-		private synchronized void setGravityAngle(float angle) {
-			gravX = (float) ((xdpi * GRAVITY_IN_INCHES / 100.0f) * Math.cos(angle));
-			gravY = (float) (ydpi * GRAVITY_IN_INCHES / 100.0f * Math.sin(angle));
+		private void setGravity(float ax, float ay) {
+			gravX = xdpi * GRAVITY_IN_INCHES / 100.0f * (ax / GRAVITY_IN_METERS);
+			gravY = ydpi * GRAVITY_IN_INCHES / 100.0f * (ay / GRAVITY_IN_METERS);
 		}
 	}
 	
@@ -168,5 +169,9 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 	public void surfaceDestroyed(SurfaceHolder holder) {
 		Log.i(TAG, "Stopping drawing loop.");
 		loop.interrupt();
+	}
+	
+	public void setGravity(float ax, float ay) {
+		loop.setGravity(ax, ay);
 	}
 }
