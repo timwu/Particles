@@ -1,7 +1,6 @@
 package com.timwu.Particles;
 
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -19,8 +18,11 @@ import android.view.SurfaceView;
 public class ParticleView extends SurfaceView implements SurfaceHolder.Callback {
 	private static final String TAG = "ParticleView";
 	private static final float NANO_SECONDS_PER_SECOND = 1000000000.0f;
+	private static final float GRAVITY_IN_INCHES = 32.2f * 12.0f;
 	
 	private ParticleViewLoop loop;
+	private float xdpi;
+	private float ydpi;
 	
 	public ParticleView(Context context, AttributeSet attrs) {
 		super(context, attrs);
@@ -32,6 +34,7 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		private List<Particle> particles = Collections.synchronizedList(new ArrayList<Particle>());
 		private long prevTick;
 		private float curTimeslice;
+		private float gravX, gravY;
 		
 		@Override
 		public void run() {
@@ -41,17 +44,20 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 			
 			prevTick = System.nanoTime();
 			Log.i(TAG, "Starting with tick " + prevTick);
+			setGravityAngle((float) (Math.PI / 2));
 			while(!isInterrupted()) {
-				tick(); // Update the clocking info
-				doPhysics();
-				doAnimation();
-				doDraw();
+				synchronized (this) {
+					tick(); // Update the clocking info
+					doPhysics();
+					doAnimation();
+					doDraw();
+				}
 			}
 		}
 		
 		private void doPhysics() {
 			// Add a particle each time around
-			sprayParticles(1, getWidth() / 2.0f, getHeight() * 0.1f, 10.0f, 
+			sprayParticles(1, getWidth() / 2.0f, getHeight() * 0.1f, 300.0f, 
 					(float) (3 * Math.PI / 2), (float) Math.PI / 4);
 			
 			// Physics states that any particle outside of the view, should be annihilated. I think.
@@ -62,11 +68,16 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 					pit.remove();
 				}
 			}
+			
+			// Gravity
+			for (Particle p : particles) {
+				p.accelerate(curTimeslice, gravX, gravY);
+			}
 		}
 		
 		private void doAnimation() {
 			for(Particle p : particles) {
-				p.tick(curTimeslice);
+				p.move(curTimeslice);
 			}
 		}
 		
@@ -107,6 +118,11 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 				particles.add(p);
 			}
 		}
+		
+		private synchronized void setGravityAngle(float angle) {
+			gravX = (float) ((xdpi * GRAVITY_IN_INCHES / 100.0f) * Math.cos(angle));
+			gravY = (float) (ydpi * GRAVITY_IN_INCHES / 100.0f * Math.sin(angle));
+		}
 	}
 	
 	private class Particle {
@@ -115,16 +131,26 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		private float r;
 		private int color;
 		
-		private void tick(float dt) {
+		private void move(float dt) {
 			// Just doing a naive implementation where velocity will be
 			// constant over the timeslice. Probably not too bad an approximation.
 			x += vx * dt;
 			y += vy * dt;
 		}
 		
+		private void accelerate(float dt, float ax, float ay) {
+			vx += dt * ax;
+			vy += dt * ay;
+		}
+		
 		public String toString() {
 			return "(" + x + ", " + y + ") <" + vx + ", " + vy + ">";
 		}
+	}
+	
+	public void setDpi(float xdpi, float ydpi) {
+		this.xdpi = xdpi;
+		this.ydpi = ydpi;
 	}
 
 	@Override
