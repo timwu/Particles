@@ -31,6 +31,7 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 	private class ParticleViewLoop extends Thread {
 		private List<Particle> particles = Collections.synchronizedList(new ArrayList<Particle>());
 		private long prevTick;
+		private float curTimeslice;
 		
 		@Override
 		public void run() {
@@ -41,6 +42,7 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 			prevTick = System.nanoTime();
 			Log.i(TAG, "Starting with tick " + prevTick);
 			while(!isInterrupted()) {
+				tick(); // Update the clocking info
 				doPhysics();
 				doAnimation();
 				doDraw();
@@ -63,12 +65,9 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		}
 		
 		private void doAnimation() {
-			long curTick = System.nanoTime();
-			float dt = (curTick - prevTick) / NANO_SECONDS_PER_SECOND;
 			for(Particle p : particles) {
-				p.tick(dt);
+				p.tick(curTimeslice);
 			}
-			prevTick = curTick;
 		}
 		
 		private void doDraw() {
@@ -86,18 +85,10 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 			getHolder().unlockCanvasAndPost(c);
 		}
 		
-		private void addRandomParticles() {
-			Random r = new Random();
-			for (int i = 0; i < 1000; i++) {
-				Particle p = new Particle();
-				p.x = r.nextInt(getWidth());
-				p.y = r.nextInt(getHeight());
-				p.r = 2.0f;
-				p.color = Color.CYAN;
-				p.vx = r.nextFloat() * 10.0f;
-				p.vy = r.nextFloat() * 10.0f;
-				particles.add(p);
-			}
+		private void tick() {
+			long curTick = System.nanoTime();
+			curTimeslice = (curTick - prevTick) / NANO_SECONDS_PER_SECOND;
+			prevTick = curTick;
 		}
 		
 		private void sprayParticles(int n, float x, float y, float vMax, float angle, float angleWindow) {
