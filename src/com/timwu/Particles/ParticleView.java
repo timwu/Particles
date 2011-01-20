@@ -35,17 +35,19 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		private List<Particle> particles = Collections.synchronizedList(new ArrayList<Particle>());
 		private long prevTick;
 		private float curTimeslice;
+		private float avgTimeslice;
 		private float gravX, gravY;
 		
 		@Override
 		public void run() {
 			Log.i(TAG, "Starting particle simulator.");
-//			Log.i(TAG, "Generating particles.");
-//			addRandomParticles();
 			
 			prevTick = System.nanoTime();
 			Log.i(TAG, "Starting with tick " + prevTick);
 			setGravity(0.0f, 9.8f);
+			// Tick once to initialize the avg timeslice;
+			tick();
+			avgTimeslice = curTimeslice;
 			while(!isInterrupted()) {
 				synchronized (this) {
 					tick(); // Update the clocking info
@@ -94,6 +96,9 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 					paint.setColor(p.color);
 					c.drawCircle(p.x, p.y, p.r, paint);
 				}
+				paint.setColor(Color.WHITE);
+				paint.setTextSize(10.0f);
+				c.drawText(getFps(), 0, 10, paint);
 			}
 			getHolder().unlockCanvasAndPost(c);
 		}
@@ -101,6 +106,7 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		private void tick() {
 			long curTick = System.nanoTime();
 			curTimeslice = (curTick - prevTick) / NANO_SECONDS_PER_SECOND;
+			avgTimeslice = (curTimeslice * 19 + avgTimeslice) / 20;
 			prevTick = curTick;
 		}
 		
@@ -123,6 +129,18 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		private void setGravity(float ax, float ay) {
 			gravX = xdpi * GRAVITY_IN_INCHES / 100.0f * (ax / GRAVITY_IN_METERS);
 			gravY = ydpi * GRAVITY_IN_INCHES / 100.0f * (ay / GRAVITY_IN_METERS);
+		}
+		
+		private static final int FPS_DISPLAY_FREQUENCY = 10;
+		private int fpsPrintDivider = 0;
+		private String savedFps;
+		private String getFps() {
+			if (fpsPrintDivider % FPS_DISPLAY_FREQUENCY == 0) {
+				float fps = 1 / avgTimeslice;
+				savedFps = String.format("%1$.2f fps", fps);
+			}
+			fpsPrintDivider = (fpsPrintDivider + 1) % FPS_DISPLAY_FREQUENCY;
+			return savedFps;
 		}
 	}
 	
