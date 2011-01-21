@@ -6,6 +6,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
+import com.timwu.Particles.math.Physics;
+import com.timwu.Particles.math.Vector2d;
+
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -18,8 +21,6 @@ import android.view.SurfaceView;
 public class ParticleView extends SurfaceView implements SurfaceHolder.Callback {
 	private static final String TAG = "ParticleView";
 	private static final float NANO_SECONDS_PER_SECOND = 1000000000.0f;
-	private static final float GRAVITY_IN_INCHES = 32.2f * 12.0f;
-	private static final float GRAVITY_IN_METERS = 9.8f;
 	
 	private ParticleViewLoop loop;
 	private float xdpi;
@@ -36,53 +37,53 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		private long prevTick;
 		private float curTimeslice;
 		private float avgTimeslice;
-		private float gravX, gravY;
+		private Vector2d gravity = new Vector2d(0.0f, Physics.G_METERS);
+		private Vector2d sprayerPos;
+		private Random r = new Random();
 		
-		@Override
-		public void run() {
+		private void init() {
 			Log.i(TAG, "Starting particle simulator.");
-			
 			prevTick = System.nanoTime();
 			Log.i(TAG, "Starting with tick " + prevTick);
-			setGravity(0.0f, 9.8f);
 			// Tick once to initialize the avg timeslice;
 			tick();
 			avgTimeslice = curTimeslice;
+			sprayerPos = new Vector2d(getWidth() / 2, getHeight() * 0.2f);
+		}
+		
+		@Override
+		public void run() {
+			init();
 			while(!isInterrupted()) {
-				synchronized (this) {
-					tick(); // Update the clocking info
-					doPhysics();
-					doAnimation();
-					doDraw();
-				}
+				tick(); // Update the clocking info
+				doPhysics();
+				doAnimation();
+				doDraw();
 			}
 			particles.clear();
 		}
 		
 		private void doPhysics() {
 			// Add a particle each time around
-			sprayParticles(1, getWidth() / 2.0f, getHeight() * 0.15f, 300.0f, 
-					(float) (3 * Math.PI / 2), (float) Math.PI / 4);
+			sprayParticles(1, sprayerPos, 300.0f, 
+					Physics.PI * 3 / 2, Physics.PI / 4);
 			
 			// Physics states that any particle outside of the view, should be annihilated. I think.
 			Iterator<Particle> pit = particles.iterator();
 			while(pit.hasNext()) {
 				Particle p = pit.next();
-				if (p.x < 0 || p.x > getWidth() || p.y < 0 || p.y > getHeight()) {
+				if (p.pos.getX() < 0 || p.pos.getX() > getWidth() || p.pos.getY() < 0 || p.pos.getY() > getHeight()) {
 					pit.remove();
 				}
 			}
 			
-			// Gravity
+			// Apply accelerations and move
 			for (Particle p : particles) {
-				p.accelerate(curTimeslice, gravX, gravY);
+				p.move(curTimeslice, gravity);
 			}
 		}
 		
 		private void doAnimation() {
-			for(Particle p : particles) {
-				p.move(curTimeslice);
-			}
 		}
 		
 		private void doDraw() {
@@ -94,7 +95,7 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 				paint.setStyle(Paint.Style.FILL_AND_STROKE);
 				for (Particle p : particles) {
 					paint.setColor(p.color);
-					c.drawCircle(p.x, p.y, p.r, paint);
+					c.drawCircle(p.pos.getX(), p.pos.getY(), p.r, paint);
 				}
 				paint.setColor(Color.WHITE);
 				paint.setTextSize(10.0f);
@@ -110,16 +111,15 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 			prevTick = curTick;
 		}
 		
-		private void sprayParticles(int n, float x, float y, float vMax, float angle, float angleWindow) {
-			Random r = new Random();
+		private void sprayParticles(int n, Vector2d pos, float speedMax, float angleMid, float angleRange) {
+
 			for (;n > 0; n--) {
 				Particle p = new Particle();
-				float v = vMax * r.nextFloat();
-				float a = angle + (r.nextFloat() - 0.5f) * angleWindow;
-				p.x = x;
-				p.y = y;
-				p.vx = (float) (Math.cos(a) * v);
-				p.vy = (float) (Math.sin(a) * v);
+				float speed = speedMax * r.nextFloat();
+				float a = angleMid + (r.nextFloat() - 0.5f) * angleRange;
+				p.pos = new Vector2d(pos);
+				p.v = new Vector2d(speed, speed);
+				p.v.multiply((float) Math.cos(a), (float) Math.sin(a));
 				p.color = Color.CYAN;
 				p.r = 2.0f;
 				particles.add(p);
@@ -127,8 +127,8 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		}
 		
 		private void setGravity(float ax, float ay) {
-			gravX = xdpi * GRAVITY_IN_INCHES / 100.0f * (ax / GRAVITY_IN_METERS);
-			gravY = ydpi * GRAVITY_IN_INCHES / 100.0f * (ay / GRAVITY_IN_METERS);
+			gravity.set(xdpi * Physics.G_INCHES / 100.0f * (ax / Physics.G_METERS),
+					    ydpi * Physics.G_INCHES / 100.0f * (ay / Physics.G_METERS));
 		}
 		
 		private static final int FPS_DISPLAY_FREQUENCY = 10;
@@ -145,25 +145,19 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 	}
 	
 	private class Particle {
-		private float x, y;
-		private float vx, vy;
+		private Vector2d pos, v;
 		private float r;
 		private int color;
 		
-		private void move(float dt) {
+		private void move(float dt, Vector2d a) {
 			// Just doing a naive implementation where velocity will be
 			// constant over the timeslice. Probably not too bad an approximation.
-			x += vx * dt;
-			y += vy * dt;
+			v.multiplyAdd(dt, a);
+			pos.multiplyAdd(dt, v);
 		}
-		
-		private void accelerate(float dt, float ax, float ay) {
-			vx += dt * ax;
-			vy += dt * ay;
-		}
-		
+
 		public String toString() {
-			return "(" + x + ", " + y + ") <" + vx + ", " + vy + ">";
+			return "Particle @ " + pos + " going " + v;
 		}
 	}
 	
