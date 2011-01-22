@@ -1,11 +1,11 @@
 package com.timwu.Particles;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
+import com.timwu.Particles.math.Segment;
 import com.timwu.Particles.math.Physics;
 import com.timwu.Particles.math.Vector2d;
 
@@ -15,8 +15,11 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.GestureDetector.SimpleOnGestureListener;
 
 public class ParticleView extends SurfaceView implements SurfaceHolder.Callback {
 	private static final String TAG = "ParticleView";
@@ -25,20 +28,27 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 	private ParticleViewLoop loop;
 	private float xdpi;
 	private float ydpi;
+	private GestureDetector gestureDetector;
 	
 	public ParticleView(Context context, AttributeSet attrs) {
 		super(context, attrs);
 		loop = new ParticleViewLoop();
 		getHolder().addCallback(this);
+		gestureDetector = new GestureDetector(context, new TouchListener());
 	}
 
 	private class ParticleViewLoop extends Thread {
-		private List<Particle> particles = Collections.synchronizedList(new ArrayList<Particle>());
+		private List<Particle> particles = new ArrayList<Particle>();
+		private List<Segment> segments = new ArrayList<Segment>();
+		private Segment currentLine;
 		private long prevTick;
 		private float curTimeslice;
 		private float avgTimeslice;
 		private Vector2d gravity = new Vector2d(0.0f, Physics.G_METERS);
 		private Vector2d sprayerPos;
+		private boolean touchDown;
+		private MotionEvent downEvent;
+		private MotionEvent scrollEvent;
 		private Random r = new Random();
 		
 		private void init() {
@@ -56,11 +66,24 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 			init();
 			while(!isInterrupted()) {
 				tick(); // Update the clocking info
+				doInput();
 				doPhysics();
 				doAnimation();
 				doDraw();
 			}
 			particles.clear();
+		}
+		
+		private void doInput() {
+			if (!touchDown) {
+				currentLine = null;
+				return;
+			}
+			if (currentLine == null) {
+				currentLine = new Segment(downEvent.getX(), downEvent.getY(), scrollEvent.getX(), scrollEvent.getY());
+				segments.add(loop.currentLine);
+			}
+			currentLine.setEnd(scrollEvent.getX(), scrollEvent.getY());
 		}
 		
 		private void doPhysics() {
@@ -76,9 +99,17 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 					pit.remove();
 				}
 			}
-			
+						
 			// Apply accelerations and move
 			for (Particle p : particles) {
+				p.accelerate(curTimeslice, gravity);
+				for (Segment segment : segments) {
+					float d = Physics.pointDistanceToLine(p.pos, segment);
+					if (d <= p.r) {
+						p.v.reflect(segment.getN());
+						p.v.scale(p.bounce);
+					}
+				}
 				p.move(curTimeslice, gravity);
 			}
 		}
@@ -88,6 +119,10 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		
 		private void doDraw() {
 			Canvas c = getHolder().lockCanvas();
+			if (c == null) {
+				Log.i(TAG, "Couldn't get a canvas to draw on.");
+				return;
+			}
 			synchronized (getHolder()) {
 				c.clipRect(0, 0, getWidth(), getHeight());
 				c.drawColor(Color.BLACK);
@@ -96,6 +131,10 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 				for (Particle p : particles) {
 					paint.setColor(p.color);
 					c.drawCircle(p.pos.getX(), p.pos.getY(), p.r, paint);
+				}
+				for (Segment l : segments) {
+					paint.setColor(l.getColor());
+					c.drawLine(l.getStart().getX(), l.getStart().getY(), l.getEnd().getX(), l.getEnd().getY(), paint);
 				}
 				paint.setColor(Color.WHITE);
 				paint.setTextSize(10.0f);
@@ -112,7 +151,6 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		}
 		
 		private void sprayParticles(int n, Vector2d pos, float speedMax, float angleMid, float angleRange) {
-
 			for (;n > 0; n--) {
 				Particle p = new Particle();
 				float speed = speedMax * r.nextFloat();
@@ -148,12 +186,16 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		private Vector2d pos, v;
 		private float r;
 		private int color;
+		private float bounce = 0.5f;
 		
 		private void move(float dt, Vector2d a) {
 			// Just doing a naive implementation where velocity will be
 			// constant over the timeslice. Probably not too bad an approximation.
-			v.multiplyAdd(dt, a);
 			pos.multiplyAdd(dt, v);
+		}
+		
+		private void accelerate(float dt, Vector2d a) {
+			v.multiplyAdd(dt, a);
 		}
 
 		public String toString() {
@@ -161,6 +203,30 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		}
 	}
 	
+	private class TouchListener extends SimpleOnGestureListener {
+		@Override
+		public boolean onDown(MotionEvent e) {
+			return true;
+		}
+
+		@Override
+		public boolean onScroll(MotionEvent down, MotionEvent scroll,
+				float distanceX, float distanceY) {
+			loop.downEvent = down;
+			loop.scrollEvent = scroll;
+			loop.touchDown = true;
+			return true;
+		}
+	}
+	
+	@Override
+	public boolean onTouchEvent(MotionEvent event) {
+		if (event.getAction() == MotionEvent.ACTION_UP) {
+			loop.touchDown = false;
+		}
+		return gestureDetector.onTouchEvent(event);
+	}
+
 	public void setDpi(float xdpi, float ydpi) {
 		this.xdpi = xdpi;
 		this.ydpi = ydpi;
