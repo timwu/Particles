@@ -49,22 +49,29 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		private boolean touchDown;
 		private MotionEvent downEvent;
 		private MotionEvent scrollEvent;
+		private boolean running = false;
 		private Random r = new Random();
 		
 		private void init() {
 			Log.i(TAG, "Starting particle simulator.");
 			prevTick = System.nanoTime();
 			Log.i(TAG, "Starting with tick " + prevTick);
+			
 			// Tick once to initialize the avg timeslice;
 			tick();
 			avgTimeslice = curTimeslice;
+			
+			// Place the sprayer
 			sprayerPos = new Vector2d(getWidth() / 2, getHeight() * 0.2f);
+			
+			// Start running
+			running = true;
 		}
 		
 		@Override
 		public void run() {
 			init();
-			while(!isInterrupted()) {
+			while(running) {
 				tick(); // Update the clocking info
 				doInput();
 				doPhysics();
@@ -104,11 +111,7 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 			for (Particle p : particles) {
 				p.accelerate(curTimeslice, gravity);
 				for (Segment segment : segments) {
-					float d = Physics.pointDistanceToLine(p.pos, segment);
-					if (d <= p.r) {
-						p.v.reflect(segment.getN());
-						p.v.scale(p.bounce);
-					}
+					p.bounceOff(curTimeslice, segment);
 				}
 				p.move(curTimeslice, gravity);
 			}
@@ -197,6 +200,15 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		private void accelerate(float dt, Vector2d a) {
 			v.multiplyAdd(dt, a);
 		}
+		
+		private void bounceOff(float dt, Segment s) {
+			float d = Physics.pointDistanceToLine(pos, s);
+			if (d <= Math.abs(dt * v.dot(s.getN())) + Physics.FUDGE ) {
+				color = Color.MAGENTA;
+				v.reflect(s.getN());
+				v.scale(bounce);
+			}
+		}
 
 		public String toString() {
 			return "Particle @ " + pos + " going " + v;
@@ -246,7 +258,7 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 	@Override
 	public void surfaceDestroyed(SurfaceHolder holder) {
 		Log.i(TAG, "Stopping drawing loop.");
-		loop.interrupt();
+		loop.running = false;
 	}
 	
 	public void setGravity(float ax, float ay) {

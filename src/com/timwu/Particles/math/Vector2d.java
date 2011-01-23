@@ -37,7 +37,9 @@ public class Vector2d implements Cloneable {
 	}
 	
 	public Vector2d reflect(Vector2d v) {
-		return multiplyAdd(Math.abs(2.0f * dot(v)), v);
+		float proj = dot(v);
+		float vScale = proj < 0 ? 2.0f * proj : -2.0f * proj;
+		return multiplyAdd(vScale , v);
 	}
 	
 	public float length() {
@@ -72,6 +74,6 @@ public class Vector2d implements Cloneable {
 
 	@Override
 	public String toString() {
-		return String.format("(%1$, %2$)", x, y);
+		return String.format("(%1$f, %2$f)[%3$f]", x, y, length());
 	}
 }

@@ -1,8 +1,10 @@
 package com.timwu.Particles.math;
 
 import android.graphics.Color;
+import android.util.Log;
 
 public class Segment {
+	private static final String TAG = "Segment";
 	private Vector2d start, end, n;
 	private int color = Color.WHITE;
 	
@@ -10,6 +12,7 @@ public class Segment {
 		start = new Vector2d(sx, sy);
 		end = new Vector2d(ex, ey);
 		n = new Vector2d(1.0f, (sx - ex) / (sy - ey)).normalize();
+		Log.i(TAG, "n = " + n);
 	}
 	
 	public void setStart(float sx, float sy) {
