@@ -36,10 +36,10 @@ public class Vector2d implements Cloneable {
 		return this;
 	}
 	
-	public Vector2d reflect(Vector2d v) {
-		float proj = dot(v);
-		float vScale = proj < 0 ? 2.0f * proj : -2.0f * proj;
-		return multiplyAdd(vScale , v);
+	public Vector2d reflect(Vector2d n) {
+		float proj = dot(n);
+		float nParallel = -2.0f * proj;
+		return multiplyAdd(nParallel , n);
 	}
 	
 	public float length() {

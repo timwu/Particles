@@ -11,7 +11,7 @@ public class Segment {
 	public Segment(float sx, float sy, float ex, float ey) {
 		start = new Vector2d(sx, sy);
 		end = new Vector2d(ex, ey);
-		n = new Vector2d(1.0f, (sx - ex) / (sy - ey)).normalize();
+		n = new Vector2d(sy - ey, ex - sx).normalize();
 		Log.i(TAG, "n = " + n);
 	}
 	
