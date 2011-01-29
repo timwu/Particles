@@ -202,7 +202,7 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		}
 		
 		private void bounceOff(float dt, Segment s) {
-			float d = Physics.pointDistanceToLine(pos, s);
+			float d = s.distanceToPoint(pos);
 			if (d <= Math.abs(dt * v.dot(s.getN())) + Physics.FUDGE ) {
 				color = Color.MAGENTA;
 				v.reflect(s.getN());

@@ -12,6 +12,22 @@ public class Segment {
 		calculateNormal();
 	}
 	
+	public float distanceToPoint(Vector2d point) {
+		Vector2d v = new Vector2d(getStart());
+		v.multiplyAdd(-1.0f, point);
+		Vector2d u = new Vector2d(getEnd());
+		u.multiplyAdd(-1.0f, getStart());
+		float len2 = u.dot(u);
+		float det = -1.0f * v.dot(u);
+		if (det < 0  || det > len2) {
+			u.multiplyAdd(-1.0f, point);
+			return (float) Math.sqrt(Math.min(v.dot(v), u.dot(u)));
+		}
+		
+		det = u.cross(v);
+		return (float) Math.sqrt(det * det / len2);
+	}
+	
 	private void calculateNormal() {
 		n = new Vector2d(start.getY() - end.getY(), end.getX() - start.getX()).normalize();
 	}
