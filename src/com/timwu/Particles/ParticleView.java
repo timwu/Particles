@@ -24,7 +24,6 @@ import android.view.GestureDetector.SimpleOnGestureListener;
 
 public class ParticleView extends SurfaceView implements SurfaceHolder.Callback {
 	private static final String TAG = "ParticleView";
-	private static final float NANO_SECONDS_PER_SECOND = 1000000000.0f;
 	
 	private ParticleViewLoop loop;
 	private float xdpi;
@@ -150,7 +149,7 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		
 		private void tick() {
 			long curTick = System.nanoTime();
-			curTimeslice = (curTick - prevTick) / NANO_SECONDS_PER_SECOND;
+			curTimeslice = (curTick - prevTick) / Physics.NANO_SECONDS_PER_SECOND;
 			avgTimeslice = (curTimeslice * 19 + avgTimeslice) / 20;
 			prevTick = curTick;
 		}
