@@ -38,17 +38,27 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 	}
 
 	private class ParticleViewLoop extends Thread {
+		// Objects
 		private List<Particle> particles = new ArrayList<Particle>();
 		private List<Segment> segments = new ArrayList<Segment>();
-		private Segment currentLine;
+		
+		// Physical state
+		private Vector2d gravity = new Vector2d(0.0f, Physics.G_METERS);
+		private Vector2d sprayerPos;
+		
+		// Timing
 		private long prevTick;
 		private float curTimeslice;
 		private float avgTimeslice;
-		private Vector2d gravity = new Vector2d(0.0f, Physics.G_METERS);
-		private Vector2d sprayerPos;
+		
+		// Segment drawing
+		private Segment currentLine;
+		
+		// Touch controls
 		private boolean touchDown;
 		private MotionEvent downEvent;
 		private MotionEvent scrollEvent;
+		
 		private boolean running = false;
 		private Random r = new Random();
 		
