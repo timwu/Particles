@@ -5,6 +5,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
+import com.timwu.Particles.math.Particle;
 import com.timwu.Particles.math.Segment;
 import com.timwu.Particles.math.Physics;
 import com.timwu.Particles.math.Vector2d;
@@ -102,7 +103,8 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 			Iterator<Particle> pit = particles.iterator();
 			while(pit.hasNext()) {
 				Particle p = pit.next();
-				if (p.pos.getX() < 0 || p.pos.getX() > getWidth() || p.pos.getY() < 0 || p.pos.getY() > getHeight()) {
+				if (p.getPos().getX() < 0 || p.getPos().getX() > getWidth() || 
+						p.getPos().getY() < 0 || p.getPos().getY() > getHeight()) {
 					pit.remove();
 				}
 			}
@@ -132,8 +134,8 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 				Paint paint = new Paint();
 				paint.setStyle(Paint.Style.FILL_AND_STROKE);
 				for (Particle p : particles) {
-					paint.setColor(p.color);
-					c.drawCircle(p.pos.getX(), p.pos.getY(), p.r, paint);
+					paint.setColor(p.getColor());
+					c.drawCircle(p.getPos().getX(), p.getPos().getY(), p.getR(), paint);
 				}
 				for (Segment l : segments) {
 					paint.setColor(l.getColor());
@@ -155,15 +157,10 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		
 		private void sprayParticles(int n, Vector2d pos, float speedMax, float angleMid, float angleRange) {
 			for (;n > 0; n--) {
-				Particle p = new Particle();
 				float speed = speedMax * r.nextFloat();
 				float a = angleMid + (r.nextFloat() - 0.5f) * angleRange;
-				p.pos = new Vector2d(pos);
-				p.v = new Vector2d(speed, speed);
-				p.v.multiply((float) Math.cos(a), (float) Math.sin(a));
-				p.color = Color.CYAN;
-				p.r = 2.0f;
-				particles.add(p);
+				Vector2d v = new Vector2d((float) (speed * Math.cos(a)), (float) (speed * Math.sin(a)));
+				particles.add(new Particle(pos, v, 2.0f, Color.CYAN));
 			}
 		}
 		
@@ -184,37 +181,7 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 			return savedFps;
 		}
 	}
-	
-	private class Particle {
-		private Vector2d pos, v;
-		private float r;
-		private int color;
-		private float bounce = 0.5f;
 		
-		private void move(float dt, Vector2d a) {
-			// Just doing a naive implementation where velocity will be
-			// constant over the timeslice. Probably not too bad an approximation.
-			pos.multiplyAdd(dt, v);
-		}
-		
-		private void accelerate(float dt, Vector2d a) {
-			v.multiplyAdd(dt, a);
-		}
-		
-		private void bounceOff(float dt, Segment s) {
-			float d = s.distanceToPoint(pos);
-			if (d <= Math.abs(dt * v.dot(s.getN())) + Physics.FUDGE ) {
-				color = Color.MAGENTA;
-				v.reflect(s.getN());
-				v.scale(bounce);
-			}
-		}
-
-		public String toString() {
-			return "Particle @ " + pos + " going " + v;
-		}
-	}
-	
 	private class TouchListener extends SimpleOnGestureListener {
 		@Override
 		public boolean onDown(MotionEvent e) {
