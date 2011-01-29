@@ -49,7 +49,6 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		// Timing
 		private long prevTick;
 		private float curTimeslice;
-		private float avgTimeslice;
 		
 		// Segment drawing
 		private Segment currentLine;
@@ -59,6 +58,9 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		private MotionEvent downEvent;
 		private MotionEvent scrollEvent;
 		
+		// FPS Display
+		private FPSCounter fps;
+		
 		private boolean running = false;
 		private Random r = new Random();
 		
@@ -67,9 +69,9 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 			prevTick = System.nanoTime();
 			Log.i(TAG, "Starting with tick " + prevTick);
 			
-			// Tick once to initialize the avg timeslice;
+			// Tick once to initialize to prime the FPS counter
 			tick();
-			avgTimeslice = curTimeslice;
+			fps = new FPSCounter(curTimeslice);
 			
 			// Place the sprayer
 			sprayerPos = new Vector2d(getWidth() / 2, getHeight() * 0.2f);
@@ -152,7 +154,7 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 				}
 				paint.setColor(Color.WHITE);
 				paint.setTextSize(10.0f);
-				c.drawText(getFps(), 0, 10, paint);
+				c.drawText(fps.getFps(curTimeslice), 0, 10, paint);
 			}
 			getHolder().unlockCanvasAndPost(c);
 		}
@@ -160,7 +162,6 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		private void tick() {
 			long curTick = System.nanoTime();
 			curTimeslice = (curTick - prevTick) / Physics.NANO_SECONDS_PER_SECOND;
-			avgTimeslice = (curTimeslice * 19 + avgTimeslice) / 20;
 			prevTick = curTick;
 		}
 		
@@ -178,17 +179,6 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 					    ydpi * Physics.G_INCHES / 100.0f * (ay / Physics.G_METERS));
 		}
 		
-		private static final int FPS_DISPLAY_FREQUENCY = 10;
-		private int fpsPrintDivider = 0;
-		private String savedFps;
-		private String getFps() {
-			if (fpsPrintDivider % FPS_DISPLAY_FREQUENCY == 0) {
-				float fps = 1 / avgTimeslice;
-				savedFps = String.format("%1$.2f fps", fps);
-			}
-			fpsPrintDivider = (fpsPrintDivider + 1) % FPS_DISPLAY_FREQUENCY;
-			return savedFps;
-		}
 	}
 		
 	private class TouchListener extends SimpleOnGestureListener {
