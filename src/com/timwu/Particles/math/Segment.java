@@ -3,13 +3,14 @@ package com.timwu.Particles.math;
 import android.graphics.Color;
 
 public class Segment {
-	private Vector2d start, end, n;
+	private Vector2d start, end, n, g;
+	private float length;
 	private int color = Color.WHITE;
 	
 	public Segment(float sx, float sy, float ex, float ey) {
 		start = new Vector2d(sx, sy);
 		end = new Vector2d(ex, ey);
-		calculateNormal();
+		precalculateProperties();
 	}
 	
 	public float distanceToPoint(Vector2d point) {
@@ -28,28 +29,45 @@ public class Segment {
 		return (float) Math.sqrt(det * det / len2);
 	}
 	
-	private void calculateNormal() {
+	private void precalculateProperties() {
+		// Normal vector
 		n = new Vector2d(start.getY() - end.getY(), end.getX() - start.getX()).normalize();
+		
+		// Vector from start to end
+		g = new Vector2d(end);
+		g.multiplyAdd(-1.0f, start);
+		
+		// Save the length before normalizing g.
+		length = g.length();
+		g.normalize();
+	}
+	
+	public float getLength() {
+		return length;
+	}
+	
+	public Vector2d getG() {
+		return g;
 	}
 	
 	public void setStart(float sx, float sy) {
 		start.set(sx, sy);
-		calculateNormal();
+		precalculateProperties();
 	}
 	
 	public void setStart(Vector2d s) {
 		start.set(s);
-		calculateNormal();
+		precalculateProperties();
 	}
 	
 	public void setEnd(float ex, float ey) {
 		end.set(ex, ey);
-		calculateNormal();
+		precalculateProperties();
 	}
 	
 	public void setEnd(Vector2d e) {
 		end.set(e);
-		calculateNormal();
+		precalculateProperties();
 	}
 	
 	public Vector2d getStart() {
@@ -66,5 +84,10 @@ public class Segment {
 	
 	public int getColor() {
 		return color;
+	}
+
+	@Override
+	public String toString() {
+		return "Segment from " + start + " to " + end;
 	}
 }

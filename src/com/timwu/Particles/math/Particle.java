@@ -15,7 +15,7 @@ public class Particle {
 		this.color = color;
 	}
 	
-	public void move(float dt, Vector2d a) {
+	public void move(float dt) {
 		// Just doing a naive implementation where velocity will be
 		// constant over the timeslice. Probably not too bad an approximation.
 		pos.multiplyAdd(dt, v);
@@ -25,13 +25,32 @@ public class Particle {
 		v.multiplyAdd(dt, a);
 	}
 	
-	public void bounceOff(float dt, Segment s) {
-		float d = s.distanceToPoint(pos);
-		if (d <= Math.abs(dt * v.dot(s.getN())) + Physics.FUDGE ) {
+	public void bounce(Vector2d normal) {
+		v.reflect(normal);
+		v.scale(bounce);
+	}
+	
+	public float impactTime(Segment s) {
+		// Get the vector going from the position to one of the segment's endpoints
+		// Will use this to determine if the particle is even towards the segment.
+		Vector2d startToPos = new Vector2d(pos).multiplyAdd(-1.0f, s.getStart());
+		Vector2d endToPos = new Vector2d(pos).multiplyAdd(-1.0f, s.getEnd());
+		if (startToPos.dot(v) >= -Physics.FUDGE && endToPos.dot(v) >= -Physics.FUDGE) {
+			// Particle is going away from the segment, fast reject here.
 			color = Color.MAGENTA;
-			v.reflect(s.getN());
-			v.scale(bounce);
+			return Float.MAX_VALUE;
 		}
+		
+		// Calculate the time to impact
+		float tImpact = (r - Math.abs(startToPos.dot(s.getN()))) / -Math.abs(v.dot(s.getN()));
+		
+		// Check if the impact lies on the segment, if not there's no impact
+		float gImpact = startToPos.dot(s.getG()) + v.dot(s.getG()) * tImpact;
+		if (gImpact < Physics.FUDGE || gImpact > s.getLength()) {
+			color = Color.YELLOW;
+			return Float.MAX_VALUE;
+		}
+		return tImpact;
 	}
 	
 	public Vector2d getPos() {
