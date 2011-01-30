@@ -123,21 +123,25 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 			// Apply accelerations and move
 			for (Particle p : particles) {
 				p.accelerate(curTimeslice, gravity);
-				float tImpact = curTimeslice;
-				Segment bounceSegment = null;
-				for (Segment segment : segments) {
-					float segImpact = p.impactTime(segment);
-					if (segImpact < tImpact) {
+				float particleTimeslice = curTimeslice;
+				while (particleTimeslice > Physics.FUDGE) {
+					float tImpact = particleTimeslice;
+					Segment bounceSegment = null;
+					for (Segment segment : segments) {
+						float segImpact = p.impactTime(segment);
+						if (segImpact < tImpact) {
 						bounceSegment = segment;
 						tImpact = segImpact;
+						}
 					}
-				}
-				if (bounceSegment != null) {
-					p.move(tImpact);
-					p.bounce(bounceSegment.getN());
-					p.move(curTimeslice - tImpact);
-				} else {
-					p.move(curTimeslice);
+					if (bounceSegment != null) {
+						p.move(tImpact);
+						p.bounce(bounceSegment);
+						particleTimeslice -= tImpact;
+					} else {
+						p.move(particleTimeslice);
+						particleTimeslice = 0;
+					}
 				}
 			}
 		}

@@ -7,6 +7,7 @@ public class Particle {
 	private float r;
 	private int color;
 	private float bounce = 0.5f;
+	private float friction = 0.75f;
 	
 	public Particle(Vector2d pos, Vector2d v, float radius, int color) {
 		this.pos = new Vector2d(pos);
@@ -25,9 +26,12 @@ public class Particle {
 		v.multiplyAdd(dt, a);
 	}
 	
-	public void bounce(Vector2d normal) {
-		v.reflect(normal);
-		v.scale(bounce);
+	public void bounce(Segment s) {
+		v.reflect(s.getN());
+		Vector2d scaledVector = new Vector2d(0, 0);
+		scaledVector.multiplyAdd(v.dot(s.getN()) * bounce, s.getN());
+		scaledVector.multiplyAdd(v.dot(s.getG()) * friction, s.getG());
+		v = scaledVector;
 	}
 	
 	public float impactTime(Segment s) {
@@ -35,8 +39,15 @@ public class Particle {
 		float pn = startToPos.dot(s.getN());
 		float vn = v.dot(s.getN());
 		
+		if (pn / vn > 0) {
+			// Reject if the velocity isn't going towards the segment
+			color = Color.MAGENTA;
+			return Float.MAX_VALUE;
+		}
+		
 		// Calculate the time to impact
 		float tImpact = 0.0f;
+		// r needs to reduce whatever pn is towards 0
 		if (pn < Physics.FUDGE) {
 			tImpact = (-r - pn) / vn;
 		} else {

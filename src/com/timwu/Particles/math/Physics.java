@@ -8,7 +8,7 @@ public class Physics {
 	// PI in a float
 	public static final float PI = (float) Math.PI;
 	// The universal Fudge constant
-	public static final float FUDGE = 0.000001f;
+	public static final float FUDGE = 0.0000001f;
 	
 	public static final float NANO_SECONDS_PER_SECOND = 1000000000.0f;
 }
