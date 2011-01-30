@@ -106,7 +106,7 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		
 		private void doInput() {
 			if (singleTap) {
-				SuckForce sf = new SuckForce(downEvent.getX(), downEvent.getY(), 150.0f, 1500.0f, 1.0f);
+				SuckForce sf = new SuckForce(downEvent.getX(), downEvent.getY(), 150.0f, 3000.0f, 1.0f);
 				forces.add(sf);
 				singleTap = false;
 			}
