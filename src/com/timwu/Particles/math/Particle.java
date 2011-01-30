@@ -7,7 +7,7 @@ public class Particle {
 	private float r;
 	private int color;
 	private float bounce = 0.5f;
-	private float friction = 0.75f;
+	private float friction = 0.9f;
 	
 	public Particle(Vector2d pos, Vector2d v, float radius, int color) {
 		this.pos = new Vector2d(pos);
