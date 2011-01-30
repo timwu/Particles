@@ -74,6 +74,6 @@ public class Vector2d implements Cloneable {
 
 	@Override
 	public String toString() {
-		return String.format("(%1$f, %2$f)[%3$f]", x, y, length());
+		return String.format("(%1$.2f, %2$.2f)[%3$.2f]", x, y, length());
 	}
 }

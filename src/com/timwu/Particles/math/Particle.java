@@ -34,22 +34,17 @@ public class Particle {
 		// Get the vector going from the position to one of the segment's endpoints
 		// Will use this to determine if the particle is even towards the segment.
 		Vector2d startToPos = new Vector2d(pos).multiplyAdd(-1.0f, s.getStart());
-		Vector2d endToPos = new Vector2d(pos).multiplyAdd(-1.0f, s.getEnd());
-		if (startToPos.dot(v) >= -Physics.FUDGE && endToPos.dot(v) >= -Physics.FUDGE) {
-			// Particle is going away from the segment, fast reject here.
-			color = Color.MAGENTA;
-			return Float.MAX_VALUE;
-		}
 		
 		// Calculate the time to impact
-		float tImpact = (r - Math.abs(startToPos.dot(s.getN()))) / -Math.abs(v.dot(s.getN()));
+		float tImpact = (r - startToPos.dot(s.getN())) / v.dot(s.getN());
 		
 		// Check if the impact lies on the segment, if not there's no impact
 		float gImpact = startToPos.dot(s.getG()) + v.dot(s.getG()) * tImpact;
-		if (gImpact < Physics.FUDGE || gImpact > s.getLength()) {
+		if (tImpact < Physics.FUDGE || gImpact < Physics.FUDGE || gImpact > s.getLength()) {
 			color = Color.YELLOW;
 			return Float.MAX_VALUE;
 		}
+		color = Color.CYAN;
 		return tImpact;
 	}
 	
