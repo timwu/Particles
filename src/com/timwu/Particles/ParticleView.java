@@ -9,7 +9,9 @@ import com.timwu.Particles.math.Particle;
 import com.timwu.Particles.math.Segment;
 import com.timwu.Particles.math.Physics;
 import com.timwu.Particles.math.Vector2d;
+import com.timwu.Particles.math.force.IForceField;
 import com.timwu.Particles.math.force.SimpleForce;
+import com.timwu.Particles.math.force.SuckForce;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -46,6 +48,7 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		// Physical state
 		private Vector2d sprayerPos;
 		private SimpleForce gravity;
+		private List<IForceField> forces = new ArrayList<IForceField>();
 		
 		// Timing
 		private long prevTick;
@@ -56,6 +59,7 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		
 		// Touch controls
 		private boolean touchDown;
+		public boolean singleTap;
 		private MotionEvent downEvent;
 		private MotionEvent scrollEvent;
 		
@@ -101,6 +105,11 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		}
 		
 		private void doInput() {
+			if (singleTap) {
+				SuckForce sf = new SuckForce(downEvent.getX(), downEvent.getY(), 150.0f, 1500.0f, 1.0f);
+				forces.add(sf);
+				singleTap = false;
+			}
 			if (!touchDown) {
 				currentLine = null;
 				return;
@@ -126,10 +135,25 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 					pit.remove();
 				}
 			}
+			
+			// Update the forces
+			Iterator<IForceField> fit = forces.iterator();
+			while(fit.hasNext()) {
+				IForceField force = fit.next();
+				force.update(curTimeslice);
+				if (force.getPurge()) {
+					fit.remove();
+				}
+			}
 						
-			// Apply accelerations and move
 			for (Particle p : particles) {
+				// Apply accelerations to the particle
 				p.accelerate(curTimeslice, gravity.getForce(p.getPos()));
+				for (IForceField force : forces) {
+					p.accelerate(curTimeslice, force.getForce(p.getPos()));
+				}
+				
+				// Do bouncing off segments and move
 				float particleTimeslice = curTimeslice;
 				while (particleTimeslice > Physics.FUDGE) {
 					float tImpact = particleTimeslice;
@@ -200,7 +224,6 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		private void setGravity(float ax, float ay) {
 			gravity.setDirection(ax, ay);
 		}
-		
 	}
 		
 	private class TouchListener extends SimpleOnGestureListener {
@@ -215,6 +238,13 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 			loop.downEvent = down;
 			loop.scrollEvent = scroll;
 			loop.touchDown = true;
+			return true;
+		}
+
+		@Override
+		public boolean onSingleTapConfirmed(MotionEvent e) {
+			loop.singleTap = true;
+			loop.downEvent = e;
 			return true;
 		}
 	}
@@ -250,6 +280,6 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 	}
 	
 	public void setGravity(float ax, float ay) {
-		loop.setGravity(ax, ay);
+		if (loop.running) loop.setGravity(ax, ay);
 	}
 }

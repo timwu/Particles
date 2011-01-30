@@ -27,4 +27,13 @@ public class SimpleForce implements IForceField {
 	public Vector2d getForce(Vector2d p) {
 		return new Vector2d(direction.getX() * xScale, direction.getY() * yScale);
 	}
+
+	@Override
+	public void update(float dt) {
+	}
+
+	@Override
+	public boolean getPurge() {
+		return false;
+	}
 }
