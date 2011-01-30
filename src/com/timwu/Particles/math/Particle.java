@@ -31,16 +31,24 @@ public class Particle {
 	}
 	
 	public float impactTime(Segment s) {
-		// Get the vector going from the position to one of the segment's endpoints
-		// Will use this to determine if the particle is even towards the segment.
 		Vector2d startToPos = new Vector2d(pos).multiplyAdd(-1.0f, s.getStart());
+		float pn = startToPos.dot(s.getN());
+		float vn = v.dot(s.getN());
 		
 		// Calculate the time to impact
-		float tImpact = (r - startToPos.dot(s.getN())) / v.dot(s.getN());
+		float tImpact = 0.0f;
+		if (pn < Physics.FUDGE) {
+			tImpact = (-r - pn) / vn;
+		} else {
+			tImpact = (r - pn) / vn;
+		}
+		
+		// We obviously can't go backwards in time
+		if (tImpact < Physics.FUDGE) return Float.MAX_VALUE;
 		
 		// Check if the impact lies on the segment, if not there's no impact
 		float gImpact = startToPos.dot(s.getG()) + v.dot(s.getG()) * tImpact;
-		if (tImpact < Physics.FUDGE || gImpact < Physics.FUDGE || gImpact > s.getLength()) {
+		if (gImpact < Physics.FUDGE || gImpact > s.getLength()) {
 			color = Color.YELLOW;
 			return Float.MAX_VALUE;
 		}
