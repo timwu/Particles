@@ -9,6 +9,7 @@ import com.timwu.Particles.math.Particle;
 import com.timwu.Particles.math.Segment;
 import com.timwu.Particles.math.Physics;
 import com.timwu.Particles.math.Vector2d;
+import com.timwu.Particles.math.force.SimpleForce;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -43,8 +44,8 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		private List<Segment> segments = new ArrayList<Segment>();
 		
 		// Physical state
-		private Vector2d gravity = new Vector2d(0.0f, Physics.G_METERS);
 		private Vector2d sprayerPos;
+		private SimpleForce gravity;
 		
 		// Timing
 		private long prevTick;
@@ -75,6 +76,12 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 			
 			// Place the sprayer
 			sprayerPos = new Vector2d(getWidth() / 2, getHeight() * 0.2f);
+			
+			// Setup gravity
+			gravity = new SimpleForce();
+			gravity.setScale(xdpi * Physics.G_INCHES / 100.0f / Physics.G_METERS,
+					         ydpi * Physics.G_INCHES / 100.0f  / Physics.G_METERS);
+			gravity.setDirection(0.0f, Physics.G_METERS);
 			
 			// Start running
 			running = true;
@@ -122,7 +129,7 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 						
 			// Apply accelerations and move
 			for (Particle p : particles) {
-				p.accelerate(curTimeslice, gravity);
+				p.accelerate(curTimeslice, gravity.getForce(p.getPos()));
 				float particleTimeslice = curTimeslice;
 				while (particleTimeslice > Physics.FUDGE) {
 					float tImpact = particleTimeslice;
@@ -191,8 +198,7 @@ public class ParticleView extends SurfaceView implements SurfaceHolder.Callback 
 		}
 		
 		private void setGravity(float ax, float ay) {
-			gravity.set(xdpi * Physics.G_INCHES / 100.0f * (ax / Physics.G_METERS),
-					    ydpi * Physics.G_INCHES / 100.0f * (ay / Physics.G_METERS));
+			gravity.setDirection(ax, ay);
 		}
 		
 	}
